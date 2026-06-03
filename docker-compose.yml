@@ -9,6 +9,7 @@ volumes:
   jupyter_notebooks:
 
 services:
+
   # 1. Servidor Web Nginx
   web-server:
     image: nginx:alpine
@@ -76,5 +77,21 @@ services:
       - JUPYTER_TOKEN=${JUPYTER_TOKEN}
     volumes:
       - jupyter_notebooks:/home/jovyan/work
+    networks:
+      - red-proyecto
+
+  # 6. Aplicación Web Next.js para pruebas de carga (¡REUBICADO AQUÍ ADENTRO!)
+  next-app:
+    build: ./next-app
+    container_name: nextjs_stress_contenedor
+    ports:
+      - "3001:3000"
+    environment:
+      - DB_HOST=postgres-db
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    depends_on:
+      - postgres-db
     networks:
       - red-proyecto
