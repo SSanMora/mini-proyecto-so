@@ -1,5 +1,4 @@
 # 📊 Laboratorio de Telemetría y Pruebas de Carga Masiva
-# 📊 Laboratorio de Telemetría y Pruebas de Carga Masiva
 
 Este proyecto es un ecosistema multi-contenedor desarrollado sobre **Ubuntu en WSL2** utilizando **Docker Compose**. El objetivo principal es simular un entorno de alta demanda mediante un algoritmo híbrido que estresa secuencialmente el CPU/RAM de un servidor web y bombardea concurrentemente una base de datos relacional, permitiendo auditar la telemetría del sistema operativo en tiempo real.
 
