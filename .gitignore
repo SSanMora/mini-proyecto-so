@@ -1,0 +1,4 @@
+.env
+postgres_data/
+jupyter_data/
+node_modules/

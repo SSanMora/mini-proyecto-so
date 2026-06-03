@@ -1,0 +1,80 @@
+version: '3.8'
+
+networks:
+  red-proyecto:
+    driver: bridge
+
+volumes:
+  db_data:
+  jupyter_notebooks:
+
+services:
+  # 1. Servidor Web Nginx
+  web-server:
+    image: nginx:alpine
+    container_name: nginx_contenedor
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx:/usr/share/nginx/html:ro
+    networks:
+      - red-proyecto
+
+  # 2. Servidor de Aplicaciones Node.js
+  node-app:
+    build: ./node-api
+    container_name: node_contenedor
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=postgres-db
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    depends_on:
+      - postgres-db
+    networks:
+      - red-proyecto
+
+  # 3. Base de Datos PostgreSQL
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: postgres_contenedor
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - red-proyecto
+
+  # 4. Administrador de Base de Datos pgAdmin
+  pgadmin-web:
+    image: dpage/pgadmin4
+    container_name: pgadmin_contenedor
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres-db
+    networks:
+      - red-proyecto
+
+  # 5. Entorno de Ciencia de Datos Jupyter Lab
+  jupyter-lab:
+    image: jupyter/base-notebook
+    container_name: jupyter_contenedor
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+    volumes:
+      - jupyter_notebooks:/home/jovyan/work
+    networks:
+      - red-proyecto
