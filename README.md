@@ -33,7 +33,7 @@ Sigue estos comandos en tu terminal de Ubuntu para clonar, levantar y auditar el
 ### 1. Clonar y preparar el entorno
 ```bash
 # Entrar al directorio de tus proyectos
-cd ~/proyecto-multiservicio
+cd ~/proyecto-so
 
 # Asegurar que las variables de entorno existan (crear archivo .env si es necesario)
 echo "POSTGRES_USER=sam_admin" > .env
