@@ -1,16 +1,14 @@
-FROM node:20-alpine
-
-# Instalar pnpm globalmente en el contenedor
+FROM node:18-alpine
+# Instalar pnpm globalmente en el sistema operativo del contenedor
 RUN npm install -g pnpm
-
 WORKDIR /app
 
-# Copiar archivos de configuración e instalar dependencias con pnpm
-COPY package*.json ./
+# Copiar manifiestos y el archivo de bloqueo de pnpm si existe
+COPY package*.json pnpm-lock.yaml* ./
 RUN pnpm install
 
 COPY . .
+EXPOSE 3001
 
-EXPOSE 3000
-
-CMD ["pnpm", "run", "dev"]
+# Ejecución del servidor de desarrollo usando pnpm
+CMD ["pnpm", "dev", "--", "-p", "3001"]

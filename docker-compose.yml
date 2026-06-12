@@ -1,97 +1,66 @@
 version: '3.8'
 
 networks:
-  red-proyecto:
+  cluster-network:
     driver: bridge
 
-volumes:
-  db_data:
-  jupyter_notebooks:
-
 services:
-
-  # 1. Servidor Web Nginx
-  web-server:
-    image: nginx:alpine
-    container_name: nginx_contenedor
+  # Servidor Web Next.js (TypeScript / App Router)
+  next-app:
+    build:
+      context: ./next-app
+      dockerfile: Dockerfile
     ports:
-      - "8080:80"
-    volumes:
-      - ./nginx:/usr/share/nginx/html:ro
-    networks:
-      - red-proyecto
-
-  # 2. Servidor de Aplicaciones Node.js
-  node-app:
-    build: ./node-api
-    container_name: node_contenedor
-    restart: always
-    ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
-      - DB_HOST=postgres-db
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_NAME=${POSTGRES_DB}
+      - DATABASE_URL=postgresql://sam_admin:bomber_password@postgres-db:5432/telemetry_db
+    networks:
+      - cluster-network
     depends_on:
       - postgres-db
-    networks:
-      - red-proyecto
 
-  # 3. Base de Datos PostgreSQL
+  # Motor de Base de Datos PostgreSQL 16 + Script de Inicialización Automatizado
   postgres-db:
-    image: postgres:15-alpine
-    container_name: postgres_contenedor
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - db_data:/var/lib/postgresql/data
+    image: postgres:16-alpine
+    container_name: postgres-db
     ports:
       - "5432:5432"
-    networks:
-      - red-proyecto
-
-  # 4. Administrador de Base de Datos pgAdmin
-  pgadmin-web:
-    image: dpage/pgadmin4
-    container_name: pgadmin_contenedor
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      - POSTGRES_USER=sam_admin
+      - POSTGRES_PASSWORD=bomber_password
+      - POSTGRES_DB=telemetry_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - cluster-network
+
+  # Panel de Administración Gráfica para PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin-panel
     ports:
       - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=sam@univalle.edu.co
+      - PGADMIN_DEFAULT_PASSWORD=admin_password
+    networks:
+      - cluster-network
     depends_on:
       - postgres-db
-    networks:
-      - red-proyecto
 
-  # 5. Entorno de Ciencia de Datos Jupyter Lab
-  jupyter-lab:
-    image: jupyter/base-notebook
-    container_name: jupyter_contenedor
+  # Entorno de Ciencia de Datos e Inteligencia Artificial
+  jupyterlab:
+    image: jupyter/scipy-notebook:latest
+    container_name: jupyter-ia
     ports:
       - "8888:8888"
-    environment:
-      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
     volumes:
-      - jupyter_notebooks:/home/jovyan/work
-    networks:
-      - red-proyecto
-
-  # 6. Aplicación Web Next.js para pruebas de carga (¡REUBICADO AQUÍ ADENTRO!)
-  next-app:
-    build: ./next-app
-    container_name: nextjs_stress_contenedor
-    ports:
-      - "3001:3000"
+      - ./notebooks:/home/jovyan/work
     environment:
-      - DB_HOST=postgres-db
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_NAME=${POSTGRES_DB}
-    depends_on:
-      - postgres-db
+      - JUPYTER_TOKEN=sam_secret_token
     networks:
-      - red-proyecto
+      - cluster-network
+
+volumes:
+  pgdata:
