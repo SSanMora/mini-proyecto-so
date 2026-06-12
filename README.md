@@ -1,10 +1,10 @@
-# 📊 Laboratorio de Telemetría y Pruebas de Carga Masiva
+# Laboratorio de Telemetría y Pruebas de Carga Masiva
 
 Este proyecto es un ecosistema multi-contenedor desarrollado sobre **Ubuntu en WSL2** utilizando **Docker Compose**. El objetivo principal es simular un entorno de alta demanda mediante un algoritmo híbrido que estresa secuencialmente el CPU/RAM de un servidor web y bombardea concurrentemente una base de datos relacional, permitiendo auditar la telemetría del sistema operativo en tiempo real.
 
 ---
 
-## 🚀 Arquitectura del Ecosistema
+## Arquitectura del Ecosistema
 
 El laboratorio está compuesto por 6 microservicios interconectados en una red aislada:
 
@@ -17,7 +17,7 @@ El laboratorio está compuesto por 6 microservicios interconectados en una red a
 
 ---
 
-## 🛠️ El Algoritmo de Sobrecarga (Estrés Técnico)
+## El Algoritmo de Sobrecarga (Estrés Técnico)
 
 Para llevar el hardware al límite, el backend ejecuta tres acciones destructivas simuladas en una sola petición:
 * **Saturación de CPU (Secuencial):** Ejecuta un bucle flotante de 40,000,000 de iteraciones trigonométricas que bloquea el hilo único de Node.js.
@@ -26,14 +26,14 @@ Para llevar el hardware al límite, el backend ejecuta tres acciones destructiva
 
 ---
 
-## 📦 Guía de Implementación Paso a Paso
+## Guía de Implementación Paso a Paso
 
 Sigue estos comandos en tu terminal de Ubuntu para clonar, levantar y auditar el laboratorio.
 
 ### 1. Clonar y preparar el entorno
 ```bash
 # Entrar al directorio de tus proyectos
-cd ~/proyecto-so
+cd ~/proyecto-os
 
 # Asegurar que las variables de entorno existan (crear archivo .env si es necesario)
 echo "POSTGRES_USER=sam_admin" > .env
