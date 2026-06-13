@@ -2,3 +2,4 @@
 postgres_data/
 jupyter_data/
 node_modules/
+.ipynb_checkpoints/
