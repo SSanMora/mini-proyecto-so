@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
   try {
     // Si se activaron ataques a la base de datos, abrimos un descriptor de socket formal
-    if (types.includes('sql') || types.includes('io')) {
+    if (types.includes('sql') || types.includes('io') || types.includes('lock')) {
       await client.connect();
     }
 
@@ -61,19 +61,90 @@ export async function POST(request: Request) {
 
       // Mecanismo 1: Simulación de inundación HTTP Flood (Red masiva)
       if (types.includes('http')) {
-        state.activeSockets = concurrency + Math.floor(Math.random() * 12);
-      }
+
+  state.activeSockets = concurrency;
+
+  const requests = [];
+
+  for (let i = 0; i < concurrency; i++) {
+    requests.push(
+      fetch('http://localhost:3001/api/ping', {
+        method: 'POST'
+      }).catch(() => {})
+    );
+  }
+
+  await Promise.all(requests);
+}
+
 
       // Mecanismo 2: Inyección masiva de SELECTs con JOINs cruzados pesados para estresar CPU
       if (types.includes('sql')) {
-        await client.query(`
-          SELECT count(*), avg(id) 
-          FROM (SELECT generate_series(1, 10000) as id) t1 
-          CROSS JOIN (SELECT generate_series(1, 10) as id) t2
-        `);
-      }
+  await client.query(`
+    SELECT
+      COUNT(*),
+      AVG(t1.id),
+      SUM(t1.id * t2.id)
+    FROM generate_series(1, 50000) t1(id)
+    CROSS JOIN generate_series(1, 500) t2(id);
+  `);
+}
 
-      // Mecanismo 3: Inserción en lotes masivos (batch INSERT) usando la variable batchSize
+	
+
+      // Mecanismo 3: Lock Contention real
+if (types.includes('lock')) {
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS lock_test (
+      id INT PRIMARY KEY,
+      counter INT
+    );
+  `);
+
+  await client.query(`
+    INSERT INTO lock_test (id, counter)
+    VALUES (1,0)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  const clientA = new Client(dbConfig);
+  const clientB = new Client(dbConfig);
+
+  await clientA.connect();
+  await clientB.connect();
+
+  try {
+
+    await clientA.query('BEGIN');
+
+    await clientA.query(`
+      UPDATE lock_test
+      SET counter = counter + 1
+      WHERE id = 1;
+    `);
+
+    const blockedUpdate = clientB.query(`
+      UPDATE lock_test
+      SET counter = counter + 1
+      WHERE id = 1;
+    `);
+
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    await clientA.query('COMMIT');
+
+    await blockedUpdate;
+
+  } finally {
+
+    await clientA.end().catch(() => {});
+    await clientB.end().catch(() => {});
+
+  }
+}
+
+// Mecanismo 4: Inserción en lotes masivos (batch INSERT) usando la variable batchSize
       if (types.includes('io')) {
         let values: string[] = [];
         // Construcción dinámica de la tupla según el tamaño del lote inyectado
@@ -93,7 +164,7 @@ export async function POST(request: Request) {
     console.error("Fricción en la inyección del núcleo:", err);
   } finally {
     // LIMPIEZA CLÍNICA: Al terminar o abortar, liberamos la memoria de PostgreSQL
-    if (types.includes('sql') || types.includes('io')) {
+    if (types.includes('sql') || types.includes('io') || types.includes('lock')) {
       await client.query(`DROP TABLE IF EXISTS stress_batch;`).catch(() => {});
       await client.end(); // Cerramos el canal del socket de forma segura
     }
