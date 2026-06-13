@@ -1,66 +1,65 @@
-version: '3.8'
-
-networks:
-  cluster-network:
-    driver: bridge
-
 services:
-  # Servidor Web Next.js (TypeScript / App Router)
-  next-app:
-    build:
-      context: ./next-app
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
-    environment:
-      - DATABASE_URL=postgresql://sam_admin:bomber_password@postgres-db:5432/telemetry_db
-    networks:
-      - cluster-network
-    depends_on:
-      - postgres-db
-
-  # Motor de Base de Datos PostgreSQL 16 + Script de Inicialización Automatizado
-  postgres-db:
+  # Contenedor 2 — Base de Datos: PostgreSQL 16 con volumen persistente
+  postgres:
     image: postgres:16-alpine
-    container_name: postgres-db
+    container_name: postgres_db
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=sam_admin
-      - POSTGRES_PASSWORD=bomber_password
-      - POSTGRES_DB=telemetry_db
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - cluster-network
+      - cluster_network
 
-  # Panel de Administración Gráfica para PostgreSQL
-  pgadmin:
+  # Contenedor 3 — PgAdmin: Panel de administración web para PostgreSQL
+  pgadmin-panel:
     image: dpage/pgadmin4
-    container_name: pgadmin-panel
+    container_name: pgadmin_panel_container
     ports:
       - "5050:80"
     environment:
-      - PGADMIN_DEFAULT_EMAIL=sam@univalle.edu.co
-      - PGADMIN_DEFAULT_PASSWORD=admin_password
-    networks:
-      - cluster-network
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
     depends_on:
-      - postgres-db
+      - postgres
+    networks:
+      - cluster_network
 
-  # Entorno de Ciencia de Datos e Inteligencia Artificial
-  jupyterlab:
-    image: jupyter/scipy-notebook:latest
-    container_name: jupyter-ia
+  # Contenedor 4 — JupyterLab: Usando tu entorno local existente
+  jupyter:
+    image: jupyter/base-notebook:latest
+    container_name: jupyter_notebook_container
     ports:
       - "8888:8888"
     volumes:
       - ./notebooks:/home/jovyan/work
-    environment:
-      - JUPYTER_TOKEN=sam_secret_token
     networks:
-      - cluster-network
+      - cluster_network
+
+  # Contenedor 1 — Servidor Web: Next.js 14 en su puerto nativo 3001
+  next-app:
+    build:
+      context: ./next-app
+      dockerfile: Dockerfile
+    container_name: querys_bomber_app
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_HOST=postgres
+      - DB_NAME=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    depends_on:
+      - postgres
+    networks:
+      - cluster_network
 
 volumes:
   pgdata:
+
+networks:
+  cluster_network:
+    driver: bridge
