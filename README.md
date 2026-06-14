@@ -1,88 +1,247 @@
-# Querys Bomber - Plataforma de Inyección de Estrés y Telemetría de Sistemas Operativos
+# Querys Bomber
 
-Este proyecto consiste en una plataforma web y un ecosistema distribuido diseñado para la ejecución, monitoreo y análisis de pruebas de estrés simultáneas sobre recursos del sistema operativo (CPU, memoria RAM, almacenamiento I/O y ancho de banda de red). El objetivo principal es evaluar los mecanismos de planificación del kernel de Linux, la gestión de hilos y la resiliencia de bases de datos bajo cargas de trabajo críticas.
+## Plataforma de Inyección de Estrés y Telemetría de Sistemas Operativos
+
+Proyecto académico desarrollado para la asignatura Sistemas Operativos de la Universidad del Valle – Sede Tuluá.
+
+### Integrantes
+
+* Santiago Serrano Morales – Código 2477006
+* Samuel Esteban Peña Jaramillo – Código 2477399
+
+### Profesor
+
+Julián Enrique Castro Segura
 
 ---
 
-## 1. Arquitectura del Sistema y Servicios
+## Descripción General
 
-El entorno está completamente orquestado mediante contenedores Docker independientes y aislados dentro de una red interna dedicada, garantizando que el consumo de recursos sea medible y atribuible a cada componente de software.
+Este proyecto consiste en una plataforma web y un ecosistema distribuido diseñado para la ejecución, monitoreo y análisis de pruebas de estrés simultáneas sobre recursos del sistema operativo (CPU, memoria RAM, almacenamiento I/O y ancho de banda de red).
 
-| Contenedor | Servicio Técnico | Puerto Host | Propósito en el Ecosistema |
-| :--- | :--- | :--- | :--- |
-| **querys_bomber_app** | Next.js 14 (App Router) | 3001 | Interfaz gráfica de usuario y orquestador del motor de inyección de estrés. Captura la telemetría del sistema en tiempo real. |
-| **postgres_db** | PostgreSQL 15 (Alpine) | 5432 | Motor de base de datos relacional que recibe las ráfagas de consultas complejas y bloqueos transaccionales. |
-| **pgadmin_panel_container** | PgAdmin 4 | 5050 | Entorno de administración web para auditar el estado de las tablas, índices y sesiones activas en PostgreSQL. |
-| **jupyter_notebook_container** | Jupyter Base Notebook | 8888 | Entorno analítico local aislado para el procesamiento posterior de datos y entrenamiento de modelos de optimización. |
+El objetivo principal es evaluar los mecanismos de planificación del kernel de Linux, la gestión de procesos e hilos, el comportamiento de los contenedores Docker y la resiliencia de bases de datos bajo cargas de trabajo críticas.
+
+---
+
+## Requisitos Previos
+
+Antes de ejecutar el proyecto se requiere:
+
+* Linux Ubuntu 22.04 o superior
+* Docker Engine 24 o superior
+* Docker Compose v2
+* Git
+* Navegador web moderno
+* Mínimo 8 GB de RAM recomendados
+* 10 GB de espacio libre en disco
+
+Verificación:
+
+```bash
+docker --version
+docker compose version
+git --version
+```
+
+---
+
+## Arquitectura General
+
+```text
+Usuario
+   │
+   ▼
+Querys Bomber (Next.js)
+   │
+   ├── PostgreSQL
+   ├── PgAdmin
+   └── JupyterLab
+```
+
+---
+
+## Arquitectura del Sistema y Servicios
+
+| Contenedor                 | Servicio Técnico        | Puerto Host | Propósito                                                    |
+| -------------------------- | ----------------------- | ----------- | ------------------------------------------------------------ |
+| querys_bomber_app          | Next.js 14 (App Router) | 3001        | Interfaz gráfica de usuario y motor de inyección de estrés   |
+| postgres_db                | PostgreSQL 15 (Alpine)  | 5432        | Base de datos utilizada para pruebas de carga y concurrencia |
+| pgadmin_panel_container    | PgAdmin 4               | 5050        | Administración y monitoreo de PostgreSQL                     |
+| jupyter_notebook_container | Jupyter Base Notebook   | 8888        | Ejecución de pruebas de inteligencia artificial y análisis   |
 
 ### Infraestructura de Red y Volúmenes
-* Red (cluster_network): Configurada bajo el driver bridge. Permite que los contenedores se comuniquen internamente utilizando sus nombres de servicio como DNS (ej. Next.js se conecta a la base de datos usando el host postgres en lugar de una IP estática).
-* Volúmenes (pgdata): Mapeado directamente al directorio de datos de PostgreSQL en /var/lib/postgresql/data. Asegura la persistencia de los registros inyectados entre reinicios del clúster.
+
+**Red (cluster_network)**
+
+Configurada bajo el driver bridge, permitiendo la comunicación entre contenedores mediante nombres de servicio.
+
+**Volumen (pgdata)**
+
+Permite la persistencia de la información almacenada por PostgreSQL entre reinicios del sistema.
 
 ---
 
-## 2. Esquema de Archivos y Organización del Proyecto
+## Organización del Proyecto
 
-El repositorio está estructurado para separar de forma limpia el código de la aplicación web, los entornos de ejecución analíticos y los archivos de configuración de la infraestructura:
-
+```text
 proyecto-os/
-├── docker-compose.yml             # Orquestador principal de los 4 servicios de Docker
-├── notebooks/                     # Directorio persistente para scripts de JupyterLab
-│   └── analisis_estres.ipynb      # Notebook de análisis de métricas de hardware
-└── next-app/                      # Directorio raíz del servidor web Next.js 14
-    ├── Dockerfile                 # Instrucciones de compilación de la imagen web
-    ├── package.json               # Dependencias de Node.js y scripts de ejecución
-    ├── next.config.js             # Configuraciones nativas del framework
-    └── src/
-        ├── app/
-            ├── layout.tsx         # Estructura global del HTML de la aplicación
-            ├── page.tsx           # Vista principal de la interfaz de usuario (Dashboard)
-            └── api/
-                └── stress/
-                    └── route.ts   # Backend encargado de ejecutar los hilos de ataque
+├── docker-compose.yml
+├── notebooks/
+│   └── training_ai_model.ipynb
+├── next-app/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── next.config.js
+│   └── src/
+│       ├── app/
+│       │   ├── layout.tsx
+│       │   ├── page.tsx
+│       │   └── api/
+│       │       └── stress/
+│       │           └── route.ts
+├── vmstat_estres.txt
+└── README.md
+```
 
 ---
 
-## 3. Algoritmia de Sobrecarga y Parámetros de la Interfaz
+## Mecanismos de Estrés Implementados
 
-El backend de la aplicación web ejecuta subprocesos orientados a saturar descriptores de archivos, sockets y ciclos de reloj del procesador. A continuación se detalla la lógica de cada ataque:
+### HTTP Flood (Red)
 
-### Tipos de Inyección de Estrés
+Genera grandes cantidades de solicitudes HTTP concurrentes hacia la aplicación, incrementando el uso de CPU y conexiones de red.
 
-1. HTTP Flood (Red): Genera bucles asíncronos de peticiones mediante hilos paralelos dirigidos hacia los endpoints del propio servidor. Esto satura el bucle de eventos (Event Loop) de Node.js y agota los sockets de conexión disponibles en la interfaz de red virtual.
-2. SQL Query Flood (CPU): Dispara ráfagas de consultas SELECT masivas y costosas a nivel computacional. El algoritmo utiliza funciones de agregación, ordenamientos complejos y funciones criptográficas (MD5) sobre tablas sin índices, forzando al planificador de consultas de PostgreSQL a ocupar el 100% de los núcleos asignados de la CPU.
-3. I/O Disk Flood (Disco): Utiliza llamadas al sistema de escritura síncrona (fs.writeFileSync) para escribir bloques masivos de datos en archivos temporales dentro del contenedor, seguidos de operaciones inmediatas de eliminación (fs.unlinkSync). Esto satura el búfer de entrada/salida del almacenamiento físico.
-4. Concurrencia / Lock Wait (Hilos/Memoria): Inicia transacciones simultáneas que intentan actualizar de forma masiva exactamente la misma fila dentro de la base de datos. Al no poder resolver las escrituras simultáneamente, el motor entra en un estado de contención, generando colas de espera que elevan drásticamente la latencia y la retención de memoria intermedia.
+### SQL Query Flood (CPU)
 
-### Parámetros de Control Clínico
+Ejecuta consultas complejas sobre PostgreSQL para incrementar el consumo de CPU y evaluar el comportamiento del planificador de consultas.
 
-* Número de Conexiones: Determina la cantidad de hilos de ejecución concurrentes que se abrirán de manera simultánea. A mayor nivel de conexiones, el sistema operativo debe realizar más operaciones de cambio de contexto (Context Switching) en la CPU.
-* Duración (Segundos): El tiempo total en el cual los hilos permanecerán activos enviando cargas de trabajo. Permite evaluar la estabilidad del sistema y el comportamiento térmico o de estrangulamiento (Throttling) del hardware bajo estrés sostenido.
-* Tamaño del Lote (Batch Size): Define la cantidad de operaciones individuales (por ejemplo, número de queries SQL o inserciones) que se agrupan dentro de una sola transacción o paquete de red antes de ser enviados al objetivo. Impacta de forma directa el consumo de memoria RAM.
+### I/O Disk Flood (Disco)
+
+Realiza escrituras y eliminaciones masivas de archivos temporales para generar carga sobre el subsistema de almacenamiento.
+
+### Concurrencia / Lock Wait
+
+Provoca bloqueos transaccionales mediante múltiples actualizaciones simultáneas sobre los mismos registros de base de datos.
 
 ---
 
-## 4. Guía de Implementación Paso a Paso
+## Parámetros de Configuración
 
-Para desplegar y asegurar una construcción totalmente limpia del proyecto sin conflictos de caché en el almacenamiento local de Linux, siga estrictamente esta secuencia operativa:
+### Número de Conexiones
 
-### Paso 1: Clonación y Ubicación
-Acceda a la ruta del proyecto en su terminal de Linux:
-> cd ~/proyecto-os
+Cantidad de procesos concurrentes utilizados durante la prueba.
 
-### Paso 2: Ejecución del Ciclo de Reinicio y Compilación Limpia
-Ejecute los siguientes cuatro comandos en orden secuencial para limpiar el almacenamiento volátil y levantar los contenedores:
+### Duración
 
-> docker compose down
-> rm -rf next-app/.next next-app/node_modules
-> docker compose build --no-cache next-app
-> docker compose up -d
+Tiempo total durante el cual se mantiene activa la carga de trabajo.
 
-### Paso 3: Verificación de Estado
-Confirme que los 4 contenedores estén en estado saludable (Up) y escuchando en sus puertos correspondientes:
-> docker compose ps
+### Tamaño del Lote (Batch Size)
 
-### Paso 4: Enlaces de Acceso a las Interfaces
-* Panel de Control Querys Bomber: http://localhost:3001
-* Administrador de Base de Datos PgAdmin: http://localhost:5050
-* Entorno Científico JupyterLab: http://localhost:8888
+Cantidad de operaciones agrupadas dentro de cada ciclo de ejecución.
+
+---
+
+## Herramientas de Monitoreo Utilizadas
+
+Durante las pruebas se utilizaron las siguientes herramientas:
+
+* htop
+* docker stats
+* vmstat
+* iostat
+* pg_stat_activity
+* JupyterLab
+
+Estas herramientas permitieron analizar el comportamiento de CPU, memoria RAM, almacenamiento y concurrencia durante la ejecución de los escenarios de estrés.
+
+---
+
+## Guía de Instalación
+
+### 1. Clonar el Repositorio
+
+```bash
+git clone https://github.com/SamuJaramillo/proyecto-os.git
+cd proyecto-os
+```
+
+### 2. Limpiar Artefactos Previos
+
+```bash
+docker compose down
+rm -rf next-app/.next
+rm -rf next-app/node_modules
+```
+
+### 3. Reconstruir la Aplicación
+
+```bash
+docker compose build --no-cache next-app
+```
+
+### 4. Iniciar el Entorno
+
+```bash
+docker compose up -d
+```
+
+### 5. Verificar Contenedores
+
+```bash
+docker compose ps
+```
+
+---
+
+## Acceso a los Servicios
+
+| Servicio      | URL                   |
+| ------------- | --------------------- |
+| Querys Bomber | http://localhost:3001 |
+| PgAdmin       | http://localhost:5050 |
+| JupyterLab    | http://localhost:8888 |
+
+---
+
+## Repositorios del Proyecto
+
+Repositorio de Santiago Serrano Morales:
+
+https://github.com/SSanMora/mini-proyecto-so
+
+Repositorio de Samuel Esteban Peña Jaramillo:
+
+https://github.com/SamuJaramillo/proyecto-os
+
+---
+
+## Evidencias Generadas
+
+El proyecto incluye:
+
+* Informe técnico IEEE.
+* Evidencias de monitoreo.
+* Capturas de ejecución.
+* Archivo vmstat_estres.txt.
+* Notebook de entrenamiento de inteligencia artificial.
+* Código fuente completo de la aplicación Querys Bomber.
+
+---
+
+## Licencia
+
+Proyecto académico desarrollado para la asignatura Sistemas Operativos de la Universidad del Valle – Sede Tuluá.
+
+---
+
+## Resultados Obtenidos
+
+Durante las pruebas se lograron ejecutar escenarios de:
+
+- HTTP Flood
+- SQL Query Flood
+- I/O Disk Stress
+- Concurrencia y Contención
+- Entrenamiento de Inteligencia Artificial
+
+Las métricas obtenidas fueron analizadas mediante htop, vmstat, iostat, docker stats y pg_stat_activity, permitiendo identificar cuellos de botella y evaluar el comportamiento de los recursos del sistema bajo condiciones de alta carga.
